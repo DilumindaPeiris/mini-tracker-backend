@@ -11,6 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB: EquipmentTracker'))
   .catch((err) => console.error('Failed to connect to MongoDB', err));
@@ -44,6 +45,27 @@ app.post('/api/checkout', async (req, res) => {
     await newCheckout.save();
 
     res.status(201).json(newCheckout);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ROUTE 3: Return an item
+app.post('/api/return', async (req, res) => {
+  const { itemId } = req.body;
+  try {
+    const item = await Item.findById(itemId);
+    
+    // Prevent returning more items than the total inventory allows
+    if (!item || item.availableQuantity >= item.totalQuantity) {
+      return res.status(400).json({ message: 'All items are already returned' });
+    }
+
+    // Increase available quantity
+    item.availableQuantity += 1;
+    await item.save();
+
+    res.status(200).json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
